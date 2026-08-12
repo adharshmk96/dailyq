@@ -30,7 +30,8 @@ const activeTab = computed({
     if (segment === 'general' || segment === 'calendar' || segment === 'overview') {
       return segment
     }
-    return 'overview'
+    // Non-matching value so Overview/General/Calendar stay unselected on settings
+    return 'none'
   },
   set(value: string) {
     navigateTo(`/dashboard/${value}`)

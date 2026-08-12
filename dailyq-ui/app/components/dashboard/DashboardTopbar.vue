@@ -29,11 +29,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
       label: 'Settings',
       icon: 'i-lucide-settings',
       onSelect() {
-        toast.add({
-          title: 'Settings',
-          description: 'Coming soon',
-          icon: 'i-lucide-settings'
-        })
+        navigateTo('/dashboard/settings/account')
       }
     }
   ],
@@ -78,6 +74,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
           v-model="activeTab"
           :items="items"
           :content="false"
+          :default-value="undefined"
           color="primary"
           variant="pill"
           size="sm"
