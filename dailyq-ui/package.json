@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@iconify-json/lucide": "^1.2.123",
     "@nuxt/ui": "4.10.0",
     "@tiptap/core": "^3",
     "@tiptap/extension-bubble-menu": "^3",

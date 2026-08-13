@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import type { DropdownMenuItem, TabsItem } from '@nuxt/ui'
+import type { DropdownMenuItem } from '@nuxt/ui'
 
-const props = defineProps<{
-  modelValue: string
-  items: TabsItem[]
-}>()
+interface DashboardNavItem {
+  label: string
+  icon: string
+  value: string
+  to: string
+}
 
-const emit = defineEmits<{
-  'update:modelValue': [value: string]
+defineProps<{
+  activeSection: string | null
+  items: DashboardNavItem[]
 }>()
 
 const toast = useToast()
-
-const activeTab = computed({
-  get: () => props.modelValue,
-  set: (value: string) => emit('update:modelValue', value)
-})
 
 const userMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
@@ -70,21 +68,27 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
       </NuxtLink>
 
       <div class="flex min-w-0 flex-1 justify-center">
-        <UTabs
-          v-model="activeTab"
-          :items="items"
-          :content="false"
-          :default-value="undefined"
-          color="primary"
-          variant="pill"
-          size="sm"
-          class="w-auto max-w-full"
-          :ui="{
-            list: 'bg-elevated/80',
-            trigger: 'px-2.5 sm:px-3',
-            label: 'hidden sm:inline'
-          }"
-        />
+        <nav
+          class="flex max-w-full items-center gap-1 rounded-lg bg-elevated/80 p-1"
+          aria-label="Dashboard sections"
+        >
+          <NuxtLink
+            v-for="item in items"
+            :key="item.value"
+            :to="item.to"
+            class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3"
+            :class="activeSection === item.value
+              ? 'bg-default text-highlighted shadow-sm'
+              : 'text-muted hover:bg-default/60 hover:text-highlighted'"
+            :aria-current="activeSection === item.value ? 'page' : undefined"
+          >
+            <UIcon
+              :name="item.icon"
+              class="size-4 shrink-0"
+            />
+            <span class="hidden sm:inline">{{ item.label }}</span>
+          </NuxtLink>
+        </nav>
       </div>
 
       <div class="flex shrink-0 items-center gap-1.5">

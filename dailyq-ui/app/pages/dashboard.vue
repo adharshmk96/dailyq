@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { TabsItem } from '@nuxt/ui'
-
 const route = useRoute()
 
 const tabItems = [
@@ -22,20 +20,15 @@ const tabItems = [
     value: 'calendar',
     to: '/dashboard/calendar'
   }
-] satisfies TabsItem[]
+]
 
-const activeTab = computed({
-  get() {
-    const segment = route.path.split('/')[2]
-    if (segment === 'general' || segment === 'calendar' || segment === 'overview') {
-      return segment
-    }
-    // Non-matching value so Overview/General/Calendar stay unselected on settings
-    return 'none'
-  },
-  set(value: string) {
-    navigateTo(`/dashboard/${value}`)
+const activeSection = computed(() => {
+  const segment = route.path.split('/')[2]
+  if (segment === 'general' || segment === 'calendar' || segment === 'overview') {
+    return segment
   }
+
+  return null
 })
 
 useHead({
@@ -46,7 +39,7 @@ useHead({
 <template>
   <div class="min-h-dvh bg-muted">
     <DashboardTopbar
-      v-model="activeTab"
+      :active-section="activeSection"
       :items="tabItems"
     />
 
