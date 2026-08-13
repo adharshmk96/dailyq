@@ -1,0 +1,17 @@
+.git
+.task
+.claude
+.cursor
+requirements
+scripts
+**/.DS_Store
+**/node_modules
+**/.nuxt
+**/.output
+**/bin
+dailyq-api/internal/web/dist
+*.db
+*.db-shm
+*.db-wal
+Dockerfile
+docker-compose.yml
