@@ -1,5 +1,10 @@
 <script setup lang="ts">
-const { pending, submit, fail } = usePlaceholderAuth()
+const { pending, register } = useAuth()
+const { fail, succeed } = useAuthFeedback()
+
+definePageMeta({
+  middleware: 'guest'
+})
 
 const name = ref('')
 const email = ref('')
@@ -37,11 +42,13 @@ async function onSubmit() {
     return
   }
 
-  await submit({
-    title: 'Account created',
-    description: 'Placeholder only — nothing was saved yet.',
-    redirectTo: '/dashboard/overview'
-  })
+  try {
+    await register({ name: name.value, email: email.value, password: password.value })
+    succeed('Account created', 'You are signed in and ready to go.')
+    await navigateTo('/dashboard/overview')
+  } catch (err) {
+    fail('Could not create account', apiErrorMessage(err))
+  }
 }
 </script>
 

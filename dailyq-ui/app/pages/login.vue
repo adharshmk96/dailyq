@@ -1,9 +1,14 @@
 <script setup lang="ts">
-const { pending, submit, fail } = usePlaceholderAuth()
+const { pending, login } = useAuth()
+const { fail, succeed } = useAuthFeedback()
+const route = useRoute()
+
+definePageMeta({
+  middleware: 'guest'
+})
 
 const email = ref('')
 const password = ref('')
-const remember = ref(true)
 
 useHead({
   title: 'Sign in — DailyQ'
@@ -20,11 +25,15 @@ async function onSubmit() {
     return
   }
 
-  await submit({
-    title: 'Signed in',
-    description: 'Placeholder only — no account was checked.',
-    redirectTo: '/dashboard/overview'
-  })
+  try {
+    const res = await login({ email: email.value, password: password.value })
+    succeed('Signed in', `Welcome back, ${res.user.name}.`)
+
+    const redirect = route.query.redirect
+    await navigateTo(typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/dashboard/overview')
+  } catch (err) {
+    fail('Sign in failed', apiErrorMessage(err, 'Invalid email or password.'))
+  }
 }
 </script>
 
@@ -58,11 +67,7 @@ async function onSubmit() {
         autocomplete="current-password"
       />
 
-      <div class="flex items-center justify-between gap-3">
-        <UCheckbox
-          v-model="remember"
-          label="Remember me"
-        />
+      <div class="flex items-center justify-end gap-3">
         <ULink
           to="/forgot-password"
           class="text-sm font-medium text-primary"

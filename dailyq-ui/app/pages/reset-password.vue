@@ -1,12 +1,13 @@
 <script setup lang="ts">
 const route = useRoute()
-const { pending, submit, fail } = usePlaceholderAuth()
+const { pending, resetPassword } = useAuth()
+const { fail, succeed } = useAuthFeedback()
 
 const password = ref('')
 const confirmPassword = ref('')
 const done = ref(false)
 
-// The real flow will carry a token in the link; nothing validates it yet.
+// The reset link carries the token; the API validates it on submit.
 const token = computed(() => {
   const value = route.query.token
   return typeof value === 'string' ? value : ''
@@ -17,6 +18,11 @@ useHead({
 })
 
 async function onSubmit() {
+  if (!token.value) {
+    fail('Missing reset token', 'Open this page from the link in your reset email.')
+    return
+  }
+
   if (!password.value || !confirmPassword.value) {
     fail('Missing fields', 'Enter and confirm your new password.')
     return
@@ -32,12 +38,13 @@ async function onSubmit() {
     return
   }
 
-  await submit({
-    title: 'Password updated',
-    description: 'Placeholder only — nothing was changed.'
-  })
-
-  done.value = true
+  try {
+    await resetPassword(token.value, password.value)
+    succeed('Password updated', 'Sign in with your new password.')
+    done.value = true
+  } catch (err) {
+    fail('Could not reset password', apiErrorMessage(err, 'This reset link is invalid or has expired.'))
+  }
 }
 </script>
 
@@ -84,7 +91,7 @@ async function onSubmit() {
         variant="subtle"
         icon="i-lucide-info"
         title="No reset token"
-        description="Open this page from a reset email link. Placeholder pages accept any input."
+        description="Open this page from the link in your reset email to set a new password."
       />
 
       <AuthPasswordField

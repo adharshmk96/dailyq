@@ -14,11 +14,14 @@ defineProps<{
 }>()
 
 const toast = useToast()
+const { user, logout } = useAuth()
+
+const displayName = computed(() => user.value?.name || user.value?.email || 'Account')
 
 const userMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: 'Alex Rivera',
+      label: displayName.value,
       type: 'label'
     }
   ],
@@ -36,13 +39,14 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
       label: 'Logout',
       icon: 'i-lucide-log-out',
       color: 'error',
-      onSelect() {
+      async onSelect() {
+        await logout()
         toast.add({
           title: 'Signed out',
-          description: 'Placeholder only — no session was cleared.',
+          description: 'Your session has been revoked.',
           icon: 'i-lucide-log-out'
         })
-        navigateTo('/login')
+        await navigateTo('/login')
       }
     }
   ]
@@ -106,8 +110,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
             aria-label="User menu"
           >
             <UAvatar
-              src="https://i.pravatar.cc/80?u=dailyq"
-              alt="Alex Rivera"
+              :alt="displayName"
               size="sm"
             />
           </UButton>

@@ -38,8 +38,10 @@ const tabItems = [
   }
 ]
 
-const displayName = ref('Alex Rivera')
-const email = ref('alex.rivera@example.com')
+const { user, pending, changePassword } = useAuth()
+
+const displayName = computed(() => user.value?.name || '')
+const email = computed(() => user.value?.email || '')
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -66,10 +68,6 @@ function comingSoon(title: string) {
   })
 }
 
-function onSaveAccount() {
-  comingSoon('Account')
-}
-
 function resetPasswordForm() {
   currentPassword.value = ''
   newPassword.value = ''
@@ -79,7 +77,7 @@ function resetPasswordForm() {
   showConfirmPassword.value = false
 }
 
-function onChangePassword() {
+async function onChangePassword() {
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
     toast.add({
       title: 'Missing fields',
@@ -120,8 +118,26 @@ function onChangePassword() {
     return
   }
 
-  comingSoon('Password')
-  resetPasswordForm()
+  try {
+    await changePassword({
+      current_password: currentPassword.value,
+      new_password: newPassword.value
+    })
+
+    toast.add({
+      title: 'Password updated',
+      description: 'Your other sessions have been signed out.',
+      icon: 'i-lucide-check-circle'
+    })
+    resetPasswordForm()
+  } catch (err) {
+    toast.add({
+      title: 'Could not update password',
+      description: apiErrorMessage(err),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  }
 }
 
 function onExportData() {
@@ -178,8 +194,7 @@ function onSaveNotifications() {
           <UCard :ui="{ body: 'space-y-5 p-4 sm:p-5' }">
             <div class="flex items-center gap-4">
               <UAvatar
-                src="https://i.pravatar.cc/80?u=dailyq"
-                alt="Alex Rivera"
+                :alt="displayName || email"
                 size="lg"
               />
               <div class="min-w-0">
@@ -197,31 +212,24 @@ function onSaveNotifications() {
               class="w-full"
             >
               <UInput
-                v-model="displayName"
+                :model-value="displayName"
                 class="w-full"
-                autocomplete="name"
+                disabled
               />
             </UFormField>
 
             <UFormField
               label="Email"
               class="w-full"
+              hint="Editing your profile is coming soon"
             >
               <UInput
-                v-model="email"
+                :model-value="email"
                 type="email"
                 class="w-full"
-                autocomplete="email"
+                disabled
               />
             </UFormField>
-
-            <div class="flex justify-end">
-              <UButton
-                label="Save changes"
-                icon="i-lucide-check"
-                @click="onSaveAccount"
-              />
-            </div>
           </UCard>
 
           <UCard :ui="{ body: 'space-y-5 p-4 sm:p-5' }">
@@ -304,6 +312,7 @@ function onSaveNotifications() {
               <UButton
                 label="Update password"
                 icon="i-lucide-lock"
+                :loading="pending"
                 :disabled="!canSubmitPassword"
                 @click="onChangePassword"
               />

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const route = useRoute()
 
+definePageMeta({
+  middleware: 'auth'
+})
+
 const tabItems = [
   {
     label: 'Overview',

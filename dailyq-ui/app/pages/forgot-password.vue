@@ -1,5 +1,6 @@
 <script setup lang="ts">
-const { pending, submit, fail } = usePlaceholderAuth()
+const { pending, forgotPassword } = useAuth()
+const { fail, succeed } = useAuthFeedback()
 
 const email = ref('')
 const sent = ref(false)
@@ -19,12 +20,13 @@ async function onSubmit() {
     return
   }
 
-  await submit({
-    title: 'Reset link sent',
-    description: 'Placeholder only — no email was actually sent.'
-  })
-
-  sent.value = true
+  try {
+    await forgotPassword(email.value)
+    succeed('Reset link sent', 'If that email is registered, a reset link is on its way.')
+    sent.value = true
+  } catch (err) {
+    fail('Could not send reset link', apiErrorMessage(err))
+  }
 }
 </script>
 
@@ -57,9 +59,9 @@ async function onSubmit() {
 
       <div class="flex flex-col gap-2">
         <UButton
-          to="/reset-password"
+          to="/login"
           block
-          label="Open reset page"
+          label="Back to sign in"
           trailing-icon="i-lucide-arrow-right"
         />
         <UButton
