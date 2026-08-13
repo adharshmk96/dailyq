@@ -15,5 +15,20 @@ func (m *Module) RegisterRoutes(rg *gin.RouterGroup) {
 	group := rg.Group("/journal", m.Middleware)
 
 	group.GET("/overview", m.Handler.Overview)
+	group.GET("/entries", m.Handler.Entries)
+	group.GET("/dates", m.Handler.Dates)
+
+	group.GET("/tags", m.Handler.ListTags)
+	group.POST("/tags", m.Handler.CreateTag)
+	group.PATCH("/tags/:id", m.Handler.UpdateTag)
+	group.DELETE("/tags/:id", m.Handler.DeleteTag)
+
+	group.POST("/tasks", m.Handler.CreateTask)
+	group.PATCH("/tasks/:id", m.Handler.UpdateTask)
 	group.PATCH("/tasks/:id/done", m.Handler.SetTaskDone)
+	group.DELETE("/tasks/:id", m.Handler.DeleteTask)
+
+	group.POST("/notes", m.Handler.CreateNote)
+	group.PATCH("/notes/:id", m.Handler.UpdateNote)
+	group.DELETE("/notes/:id", m.Handler.DeleteNote)
 }

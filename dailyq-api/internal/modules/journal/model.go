@@ -56,6 +56,42 @@ type ToggleTaskRequest struct {
 	Done *bool `json:"done" binding:"required"`
 }
 
+// The `oneof` on Color below is the UI's tag palette; anything else is rejected.
+
+type CreateTagRequest struct {
+	Name  string `json:"name" binding:"required,min=1,max=64"`
+	Color string `json:"color" binding:"required,oneof=primary success warning info error neutral"`
+}
+
+type UpdateTagRequest struct {
+	Name  string `json:"name" binding:"required,min=1,max=64"`
+	Color string `json:"color" binding:"required,oneof=primary success warning info error neutral"`
+}
+
+type CreateTaskRequest struct {
+	Title  string   `json:"title" binding:"required,min=1,max=512"`
+	Date   *string  `json:"date"`
+	TagIDs []string `json:"tag_ids"`
+}
+
+type UpdateTaskRequest struct {
+	Title  string   `json:"title" binding:"required,min=1,max=512"`
+	Date   *string  `json:"date"`
+	TagIDs []string `json:"tag_ids"`
+}
+
+type CreateNoteRequest struct {
+	Body   string   `json:"body" binding:"required,min=1"`
+	Date   *string  `json:"date"`
+	TagIDs []string `json:"tag_ids"`
+}
+
+type UpdateNoteRequest struct {
+	Body   string   `json:"body" binding:"required,min=1"`
+	Date   *string  `json:"date"`
+	TagIDs []string `json:"tag_ids"`
+}
+
 // ---- response payloads ----
 
 type TagResponse struct {
@@ -77,6 +113,20 @@ type NoteResponse struct {
 	Body   string   `json:"body"`
 	Date   *string  `json:"date"`
 	TagIDs []string `json:"tag_ids"`
+}
+
+// EntriesResponse is the tasks and notes for one scope — a single date, or the
+// undated "general" bucket when Date is nil.
+type EntriesResponse struct {
+	Date  *string        `json:"date"`
+	Tasks []TaskResponse `json:"tasks"`
+	Notes []NoteResponse `json:"notes"`
+}
+
+// DatesResponse lists every date the user has at least one item on. The
+// calendar uses it to dot the days that have content.
+type DatesResponse struct {
+	Dates []string `json:"dates"`
 }
 
 // OverviewStats are the counters shown on the dashboard overview cards.

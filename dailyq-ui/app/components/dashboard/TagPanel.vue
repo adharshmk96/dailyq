@@ -2,8 +2,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { JournalTag, TagColor } from '~/types/journal'
 
-const journal = usePlaceholderJournal()
-const { tags, addTag, updateTag, deleteTag } = journal
+const { tags, addTag, updateTag, deleteTag } = useJournalTags()
 const { activeTagId, toggleTag } = useTagFilter()
 
 const modalOpen = ref(false)

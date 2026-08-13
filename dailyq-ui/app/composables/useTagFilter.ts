@@ -1,12 +1,13 @@
 export function useTagFilter() {
   const route = useRoute()
-  const journal = usePlaceholderJournal()
+  const { tags } = useJournalTags()
 
   const activeTagId = computed(() => {
     const param = route.query.tag
     if (typeof param !== 'string' || !param) return null
-    const exists = journal.tags.value.some(t => t.id === param)
-    return exists ? param : null
+    // Tags load asynchronously; don't drop the filter before they arrive.
+    if (!tags.value.length) return param
+    return tags.value.some(t => t.id === param) ? param : null
   })
 
   watch(activeTagId, (value) => {

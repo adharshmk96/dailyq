@@ -5,8 +5,7 @@ import type { ItemKind, JournalNote, JournalTask, TagColor } from '~/types/journ
 const props = withDefaults(defineProps<{
   title: string
   description?: string
-  tasks: JournalTask[]
-  notes: JournalNote[]
+  /** ISO date for the calendar board; null for the undated General board. */
   date?: string | null
   activeTagId?: string | null
 }>(), {
@@ -15,17 +14,25 @@ const props = withDefaults(defineProps<{
   activeTagId: null
 })
 
+const boardDate = computed(() => props.date ?? null)
+
+const { tags, getTagById } = useJournalTags()
+
 const {
-  tags,
+  tasks: allTasks,
+  notes: allNotes,
+  pending,
   addTask,
   addNote,
   updateTask,
   updateNote,
   deleteTask,
   deleteNote,
-  toggleTaskDone,
-  getTagById
-} = usePlaceholderJournal()
+  toggleTaskDone
+} = useJournalBoard(boardDate)
+
+const tasks = computed(() => filterItemsByTag(allTasks.value, props.activeTagId))
+const notes = computed(() => filterItemsByTag(allNotes.value, props.activeTagId))
 
 const kind = ref<ItemKind>('tasks')
 const draft = ref('')
@@ -74,16 +81,22 @@ function addTagIdsForCreate() {
   return props.activeTagId ? [props.activeTagId] : []
 }
 
-function onAdd() {
+const saving = ref(false)
+
+async function onAdd() {
+  if (saving.value || !draft.value.trim()) return
+
   const tagIds = addTagIdsForCreate()
-  if (isTasks.value) {
-    if (addTask(draft.value, props.date, tagIds)) {
+  saving.value = true
+  try {
+    const created = isTasks.value
+      ? await addTask(draft.value, tagIds)
+      : await addNote(draft.value, tagIds)
+    if (created) {
       draft.value = ''
     }
-    return
-  }
-  if (addNote(draft.value, props.date, tagIds)) {
-    draft.value = ''
+  } finally {
+    saving.value = false
   }
 }
 
@@ -111,16 +124,22 @@ function toggleEditTag(tagId: string) {
   editTagIds.value = [...editTagIds.value, tagId]
 }
 
-function saveEdit() {
-  if (!editId.value) return
-  const ok = isTasks.value
-    ? updateTask(editId.value, editText.value, editTagIds.value)
-    : updateNote(editId.value, editText.value, editTagIds.value)
-  if (ok) {
-    editOpen.value = false
-    editId.value = null
-    editText.value = ''
-    editTagIds.value = []
+async function saveEdit() {
+  if (!editId.value || saving.value) return
+
+  saving.value = true
+  try {
+    const ok = isTasks.value
+      ? await updateTask(editId.value, editText.value, editTagIds.value)
+      : await updateNote(editId.value, editText.value, editTagIds.value)
+    if (ok) {
+      editOpen.value = false
+      editId.value = null
+      editText.value = ''
+      editTagIds.value = []
+    }
+  } finally {
+    saving.value = false
   }
 }
 </script>
@@ -168,12 +187,25 @@ function saveEdit() {
           :label="addLabel"
           icon="i-lucide-plus"
           size="lg"
+          :loading="saving"
+          :disabled="!draft.trim()"
         />
       </form>
 
       <USeparator />
 
-      <template v-if="isTasks">
+      <div
+        v-if="pending"
+        class="space-y-3 py-2"
+      >
+        <USkeleton
+          v-for="i in 3"
+          :key="i"
+          class="h-6 w-full"
+        />
+      </div>
+
+      <template v-else-if="isTasks">
         <ul
           v-if="tasks.length"
           class="divide-y divide-default"
@@ -350,6 +382,7 @@ function saveEdit() {
           <UButton
             label="Save"
             icon="i-lucide-check"
+            :loading="saving"
             @click="saveEdit"
           />
         </div>

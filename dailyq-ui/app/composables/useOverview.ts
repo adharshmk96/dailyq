@@ -44,8 +44,9 @@ export function useOverview() {
   const api = useApiFetch()
 
   const { data, pending, error, refresh } = useAsyncData<Overview>(
-    'dashboard-overview',
-    () => api<Overview>('/journal/overview')
+    OVERVIEW_KEY,
+    () => api<Overview>('/journal/overview'),
+    { dedupe: 'defer' }
   )
 
   const tagsById = computed(() => {
@@ -69,13 +70,22 @@ export function useOverview() {
     if (!task || !data.value) return
 
     const next = !task.done
-    task.done = next
+    // useAsyncData's ref is shallow, so swap the object to flip the checkbox.
+    const setDone = (done: boolean) => {
+      if (!data.value) return
+      data.value = {
+        ...data.value,
+        today_tasks: data.value.today_tasks.map(t => (t.id === id ? { ...t, done } : t))
+      }
+    }
+
+    setDone(next)
 
     try {
       await api(`/journal/tasks/${id}/done`, { method: 'PATCH', body: { done: next } })
       await refresh()
     } catch (err) {
-      task.done = !next
+      setDone(!next)
       throw err
     }
   }

@@ -2,24 +2,15 @@
 import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
 import type { DateValue } from '@internationalized/date'
 
-const journal = usePlaceholderJournal()
-const { datesWithItems, getTasksForDate, getNotesForDate, filterItemsByTag } = journal
+const { datesWithItems } = useJournalDates()
 const { activeTagId } = useTagFilter()
 
 const selected = shallowRef<CalendarDate>(today(getLocalTimeZone()))
 
 const selectedIso = computed(() => {
-  const d = selected.value
-  if (!d) return journal.today.value
+  const d = selected.value ?? today(getLocalTimeZone())
   return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
 })
-
-const dayTasks = computed(() =>
-  filterItemsByTag(getTasksForDate(selectedIso.value), activeTagId.value)
-)
-const dayNotes = computed(() =>
-  filterItemsByTag(getNotesForDate(selectedIso.value), activeTagId.value)
-)
 
 const formattedDate = computed(() => {
   const [y, m, day] = selectedIso.value.split('-').map(Number)
@@ -77,8 +68,6 @@ function hasItems(date: DateValue) {
       <DashboardItemBoard
         :title="formattedDate"
         description="Add and manage items for the selected date."
-        :tasks="dayTasks"
-        :notes="dayNotes"
         :date="selectedIso"
         :active-tag-id="activeTagId"
       />
