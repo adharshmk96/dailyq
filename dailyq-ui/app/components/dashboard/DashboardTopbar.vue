@@ -38,11 +38,11 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
       color: 'error',
       onSelect() {
         toast.add({
-          title: 'Logout',
-          description: 'Coming soon',
-          icon: 'i-lucide-log-out',
-          color: 'error'
+          title: 'Signed out',
+          description: 'Placeholder only — no session was cleared.',
+          icon: 'i-lucide-log-out'
         })
+        navigateTo('/login')
       }
     }
   ]

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dailyq-ui",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--cwd", "dailyq-ui", "dev"],
+      "port": 3000
+    }
+  ]
+}
