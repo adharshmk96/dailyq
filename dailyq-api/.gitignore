@@ -1,3 +1,6 @@
-*.db
-config.yaml
 /dailyq-api
+/bin
+
+# UI build copied in by `task ui`; only the .keep placeholder is tracked.
+/internal/web/dist/*
+!/internal/web/dist/.keep

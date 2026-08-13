@@ -3,6 +3,7 @@ package server
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -33,11 +34,18 @@ func NewRouter(cfg *config.Config, db *gorm.DB, log *slog.Logger) *gin.Engine {
 	v1 := engine.Group("/api/v1")
 	authModule.RegisterRoutes(v1)
 
+	spa, err := spaHandler(log)
+	if err != nil {
+		log.Error("ui assets unavailable, serving api only", "error", err)
+	}
+
 	engine.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": gin.H{
-			"code":    "not_found",
-			"message": "resource not found",
-		}})
+		// API paths always answer with JSON; anything else is the UI's.
+		if spa == nil || strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, notFoundBody())
+			return
+		}
+		spa(c)
 	})
 
 	return engine

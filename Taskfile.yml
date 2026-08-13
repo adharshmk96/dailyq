@@ -1,0 +1,59 @@
+version: '3'
+
+vars:
+  DIST_DIR: dailyq-api/internal/web/dist
+
+tasks:
+  default:
+    desc: Build the UI and the server
+    cmds:
+      - task: build
+
+  build:
+    desc: Build the UI, embed it, and produce a single binary
+    cmds:
+      - task: ui
+      - task: api
+
+  ui:
+    desc: Generate the static UI and copy it into the Go embed directory
+    cmds:
+      - ./scripts/build-ui.sh
+    sources:
+      - dailyq-ui/app/**/*
+      - dailyq-ui/public/**/*
+      - dailyq-ui/nuxt.config.ts
+      - dailyq-ui/package.json
+    generates:
+      - '{{.DIST_DIR}}/index.html'
+
+  api:
+    desc: Compile the server with whatever is currently embedded
+    cmds:
+      - ./scripts/build-api.sh
+
+  run:
+    desc: Build everything, then serve the UI and API from one process
+    deps: [build]
+    cmds:
+      - ./scripts/run.sh {{.CLI_ARGS}}
+
+  serve:
+    desc: Serve using the existing binary, without rebuilding
+    cmds:
+      - ./scripts/run.sh {{.CLI_ARGS}}
+
+  dev:ui:
+    desc: Nuxt dev server (proxies /api to the local API server)
+    cmds:
+      - ./scripts/dev-ui.sh
+
+  dev:api:
+    desc: Run the API server from source
+    cmds:
+      - ./scripts/dev-api.sh {{.CLI_ARGS}}
+
+  clean:
+    desc: Remove build outputs and reset the embed directory
+    cmds:
+      - ./scripts/clean.sh
