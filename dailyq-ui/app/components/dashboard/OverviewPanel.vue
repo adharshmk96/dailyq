@@ -1,16 +1,9 @@
 <script setup lang="ts">
 import type { TagColor } from '~/types/journal'
 
-const {
-  totalTasksCount,
-  completedTodayCount,
-  openGeneralCount,
-  notesThisWeekCount,
-  todayTasks,
-  recentNotes,
-  toggleTaskDone,
-  getTagById
-} = usePlaceholderJournal()
+const { overview, pending, error, refresh, getTagById, toggleTaskDone } = useOverview()
+
+const toast = useToast()
 
 const badgeColorMap: Record<TagColor, 'primary' | 'success' | 'warning' | 'info' | 'error' | 'neutral'> = {
   primary: 'primary',
@@ -27,32 +20,52 @@ function resolveTagBadges(tagIds: string[]) {
     .filter((tag): tag is NonNullable<typeof tag> => !!tag)
 }
 
-const stats = computed(() => [
-  {
-    label: 'Total tasks',
-    value: totalTasksCount.value,
-    icon: 'i-lucide-list-checks',
-    color: 'text-primary'
-  },
-  {
-    label: 'Done today',
-    value: completedTodayCount.value,
-    icon: 'i-lucide-circle-check',
-    color: 'text-success'
-  },
-  {
-    label: 'Open general',
-    value: openGeneralCount.value,
-    icon: 'i-lucide-layers',
-    color: 'text-warning'
-  },
-  {
-    label: 'Notes this week',
-    value: notesThisWeekCount.value,
-    icon: 'i-lucide-notebook-pen',
-    color: 'text-info'
+async function onToggle(id: string) {
+  try {
+    await toggleTaskDone(id)
+  } catch (err) {
+    toast.add({
+      title: apiErrorMessage(err, 'Could not update the task.'),
+      color: 'error'
+    })
   }
-])
+}
+
+const todayTasks = computed(() => overview.value?.today_tasks ?? [])
+const recentNotes = computed(() => overview.value?.recent_notes ?? [])
+
+const stats = computed(() => {
+  const s = overview.value?.stats
+  return [
+    {
+      label: 'Total tasks',
+      value: s?.total_tasks ?? 0,
+      icon: 'i-lucide-list-checks',
+      color: 'text-primary'
+    },
+    {
+      label: 'Done today',
+      value: s?.completed_today ?? 0,
+      icon: 'i-lucide-circle-check',
+      color: 'text-success'
+    },
+    {
+      label: 'Open general',
+      value: s?.open_general ?? 0,
+      icon: 'i-lucide-layers',
+      color: 'text-warning'
+    },
+    {
+      label: 'Notes this week',
+      value: s?.notes_this_week ?? 0,
+      icon: 'i-lucide-notebook-pen',
+      color: 'text-info'
+    }
+  ]
+})
+
+// Only the very first load shows skeletons; refreshes keep the current data.
+const loading = computed(() => pending.value && !overview.value)
 </script>
 
 <template>
@@ -66,6 +79,16 @@ const stats = computed(() => [
       </p>
     </div>
 
+    <UAlert
+      v-if="error"
+      icon="i-lucide-triangle-alert"
+      color="error"
+      variant="subtle"
+      title="Couldn't load your overview"
+      :description="apiErrorMessage(error)"
+      :actions="[{ label: 'Retry', color: 'error', variant: 'outline', onClick: () => refresh() }]"
+    />
+
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <UCard
         v-for="stat in stats"
@@ -77,7 +100,14 @@ const stats = computed(() => [
             <p class="text-sm text-muted">
               {{ stat.label }}
             </p>
-            <p class="mt-1 text-3xl font-semibold tabular-nums text-highlighted">
+            <USkeleton
+              v-if="loading"
+              class="mt-2 h-8 w-12"
+            />
+            <p
+              v-else
+              class="mt-1 text-3xl font-semibold tabular-nums text-highlighted"
+            >
               {{ stat.value }}
             </p>
           </div>
@@ -106,6 +136,7 @@ const stats = computed(() => [
               Today's tasks
             </h2>
             <UBadge
+              v-if="!loading"
               color="neutral"
               variant="subtle"
               size="sm"
@@ -115,8 +146,18 @@ const stats = computed(() => [
           </div>
         </template>
 
+        <div
+          v-if="loading"
+          class="space-y-3"
+        >
+          <USkeleton
+            v-for="n in 3"
+            :key="n"
+            class="h-6 w-full"
+          />
+        </div>
         <ul
-          v-if="todayTasks.length"
+          v-else-if="todayTasks.length"
           class="divide-y divide-default"
         >
           <li
@@ -127,7 +168,7 @@ const stats = computed(() => [
             <UCheckbox
               :model-value="task.done"
               :aria-label="`Toggle ${task.title}`"
-              @update:model-value="toggleTaskDone(task.id)"
+              @update:model-value="onToggle(task.id)"
             />
             <div class="min-w-0 flex-1 space-y-1">
               <span
@@ -137,11 +178,11 @@ const stats = computed(() => [
                 {{ task.title }}
               </span>
               <div
-                v-if="task.tagIds.length"
+                v-if="task.tag_ids.length"
                 class="flex flex-wrap gap-1"
               >
                 <UBadge
-                  v-for="tag in resolveTagBadges(task.tagIds)"
+                  v-for="tag in resolveTagBadges(task.tag_ids)"
                   :key="tag.id"
                   :color="badgeColorMap[tag.color]"
                   variant="subtle"
@@ -175,8 +216,18 @@ const stats = computed(() => [
           </div>
         </template>
 
+        <div
+          v-if="loading"
+          class="space-y-3"
+        >
+          <USkeleton
+            v-for="n in 3"
+            :key="n"
+            class="h-6 w-full"
+          />
+        </div>
         <ul
-          v-if="recentNotes.length"
+          v-else-if="recentNotes.length"
           class="divide-y divide-default"
         >
           <li

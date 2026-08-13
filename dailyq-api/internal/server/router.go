@@ -11,6 +11,7 @@ import (
 
 	"dailyq-api/internal/config"
 	"dailyq-api/internal/modules/auth"
+	"dailyq-api/internal/modules/journal"
 )
 
 // NewRouter builds the gin engine with all middleware and module routes.
@@ -31,8 +32,15 @@ func NewRouter(cfg *config.Config, db *gorm.DB, log *slog.Logger) *gin.Engine {
 		Middleware: auth.Middleware(authSvc),
 	}
 
+	journalModule := &journal.Module{
+		Service:    journal.NewService(journal.NewRepository(db), log),
+		Middleware: authModule.Middleware,
+	}
+	journalModule.Handler = journal.NewHandler(journalModule.Service)
+
 	v1 := engine.Group("/api/v1")
 	authModule.RegisterRoutes(v1)
+	journalModule.RegisterRoutes(v1)
 
 	spa, err := spaHandler(log)
 	if err != nil {

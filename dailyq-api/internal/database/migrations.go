@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"dailyq-api/internal/modules/auth"
+	"dailyq-api/internal/modules/journal"
 )
 
 // models lists every entity managed by auto-migration.
@@ -14,6 +15,9 @@ func models() []any {
 		&auth.User{},
 		&auth.Session{},
 		&auth.PasswordResetToken{},
+		&journal.Tag{},
+		&journal.Task{},
+		&journal.Note{},
 	}
 }
 
