@@ -41,6 +41,19 @@ const tabItems = [
 const displayName = ref('Alex Rivera')
 const email = ref('alex.rivera@example.com')
 
+const currentPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+const canSubmitPassword = computed(() =>
+  currentPassword.value.length > 0
+  && newPassword.value.length >= 8
+  && newPassword.value === confirmPassword.value
+)
+
 const emailNotifications = ref(true)
 const pushNotifications = ref(false)
 const weeklyDigest = ref(true)
@@ -55,6 +68,60 @@ function comingSoon(title: string) {
 
 function onSaveAccount() {
   comingSoon('Account')
+}
+
+function resetPasswordForm() {
+  currentPassword.value = ''
+  newPassword.value = ''
+  confirmPassword.value = ''
+  showCurrentPassword.value = false
+  showNewPassword.value = false
+  showConfirmPassword.value = false
+}
+
+function onChangePassword() {
+  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
+    toast.add({
+      title: 'Missing fields',
+      description: 'Please fill in all password fields.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  if (newPassword.value.length < 8) {
+    toast.add({
+      title: 'Password too short',
+      description: 'Password must be at least 8 characters.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  if (newPassword.value !== confirmPassword.value) {
+    toast.add({
+      title: 'Passwords do not match',
+      description: 'New password and confirmation must match.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  if (newPassword.value === currentPassword.value) {
+    toast.add({
+      title: 'Same password',
+      description: 'New password must be different from your current password.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  comingSoon('Password')
+  resetPasswordForm()
 }
 
 function onExportData() {
@@ -104,57 +171,145 @@ function onSaveNotifications() {
       </nav>
 
       <div class="min-w-0 flex-1">
-        <UCard
+        <div
           v-if="activeTab === 'account'"
-          :ui="{ body: 'space-y-5 p-4 sm:p-5' }"
+          class="space-y-5"
         >
-          <div class="flex items-center gap-4">
-            <UAvatar
-              src="https://i.pravatar.cc/80?u=dailyq"
-              alt="Alex Rivera"
-              size="lg"
-            />
-            <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-highlighted">
-                {{ displayName }}
-              </p>
-              <p class="truncate text-sm text-muted">
-                {{ email }}
+          <UCard :ui="{ body: 'space-y-5 p-4 sm:p-5' }">
+            <div class="flex items-center gap-4">
+              <UAvatar
+                src="https://i.pravatar.cc/80?u=dailyq"
+                alt="Alex Rivera"
+                size="lg"
+              />
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-highlighted">
+                  {{ displayName }}
+                </p>
+                <p class="truncate text-sm text-muted">
+                  {{ email }}
+                </p>
+              </div>
+            </div>
+
+            <UFormField
+              label="Display name"
+              class="w-full"
+            >
+              <UInput
+                v-model="displayName"
+                class="w-full"
+                autocomplete="name"
+              />
+            </UFormField>
+
+            <UFormField
+              label="Email"
+              class="w-full"
+            >
+              <UInput
+                v-model="email"
+                type="email"
+                class="w-full"
+                autocomplete="email"
+              />
+            </UFormField>
+
+            <div class="flex justify-end">
+              <UButton
+                label="Save changes"
+                icon="i-lucide-check"
+                @click="onSaveAccount"
+              />
+            </div>
+          </UCard>
+
+          <UCard :ui="{ body: 'space-y-5 p-4 sm:p-5' }">
+            <div>
+              <h2 class="text-sm font-medium text-highlighted">
+                Change password
+              </h2>
+              <p class="mt-1 text-sm text-muted">
+                Update your account password.
               </p>
             </div>
-          </div>
 
-          <UFormField
-            label="Display name"
-            class="w-full"
-          >
-            <UInput
-              v-model="displayName"
+            <UFormField
+              label="Current password"
               class="w-full"
-              autocomplete="name"
-            />
-          </UFormField>
+            >
+              <UInput
+                v-model="currentPassword"
+                :type="showCurrentPassword ? 'text' : 'password'"
+                class="w-full"
+                autocomplete="current-password"
+              >
+                <template #trailing>
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    :icon="showCurrentPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :aria-label="showCurrentPassword ? 'Hide password' : 'Show password'"
+                    @click="showCurrentPassword = !showCurrentPassword"
+                  />
+                </template>
+              </UInput>
+            </UFormField>
 
-          <UFormField
-            label="Email"
-            class="w-full"
-          >
-            <UInput
-              v-model="email"
-              type="email"
+            <UFormField
+              label="New password"
               class="w-full"
-              autocomplete="email"
-            />
-          </UFormField>
+            >
+              <UInput
+                v-model="newPassword"
+                :type="showNewPassword ? 'text' : 'password'"
+                class="w-full"
+                autocomplete="new-password"
+              >
+                <template #trailing>
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    :icon="showNewPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :aria-label="showNewPassword ? 'Hide password' : 'Show password'"
+                    @click="showNewPassword = !showNewPassword"
+                  />
+                </template>
+              </UInput>
+            </UFormField>
 
-          <div class="flex justify-end">
-            <UButton
-              label="Save changes"
-              icon="i-lucide-check"
-              @click="onSaveAccount"
-            />
-          </div>
-        </UCard>
+            <UFormField
+              label="Confirm password"
+              class="w-full"
+            >
+              <UInput
+                v-model="confirmPassword"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                class="w-full"
+                autocomplete="new-password"
+              >
+                <template #trailing>
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    :icon="showConfirmPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                  />
+                </template>
+              </UInput>
+            </UFormField>
+
+            <div class="flex justify-end">
+              <UButton
+                label="Update password"
+                icon="i-lucide-lock"
+                :disabled="!canSubmitPassword"
+                @click="onChangePassword"
+              />
+            </div>
+          </UCard>
+        </div>
 
         <UCard
           v-else-if="activeTab === 'data'"
