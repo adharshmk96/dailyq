@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import type { ItemKind, JournalNote, JournalTask } from '~/types/journal'
+import type { ItemKind, JournalNote, JournalTask, TagColor } from '~/types/journal'
 
 const props = withDefaults(defineProps<{
   title: string
@@ -8,19 +8,23 @@ const props = withDefaults(defineProps<{
   tasks: JournalTask[]
   notes: JournalNote[]
   date?: string | null
+  activeTagId?: string | null
 }>(), {
   description: undefined,
-  date: null
+  date: null,
+  activeTagId: null
 })
 
 const {
+  tags,
   addTask,
   addNote,
   updateTask,
   updateNote,
   deleteTask,
   deleteNote,
-  toggleTaskDone
+  toggleTaskDone,
+  getTagById
 } = usePlaceholderJournal()
 
 const kind = ref<ItemKind>('tasks')
@@ -28,6 +32,7 @@ const draft = ref('')
 const editOpen = ref(false)
 const editId = ref<string | null>(null)
 const editText = ref('')
+const editTagIds = ref<string[]>([])
 
 const kindItems = computed<TabsItem[]>(() => [
   {
@@ -50,14 +55,34 @@ const placeholder = computed(() =>
 
 const addLabel = computed(() => (isTasks.value ? 'Add task' : 'Add note'))
 
+const badgeColorMap: Record<TagColor, 'primary' | 'success' | 'warning' | 'info' | 'error' | 'neutral'> = {
+  primary: 'primary',
+  success: 'success',
+  warning: 'warning',
+  info: 'info',
+  error: 'error',
+  neutral: 'neutral'
+}
+
+function resolveTagBadges(tagIds: string[]) {
+  return tagIds
+    .map(id => getTagById(id))
+    .filter((tag): tag is NonNullable<typeof tag> => !!tag)
+}
+
+function addTagIdsForCreate() {
+  return props.activeTagId ? [props.activeTagId] : []
+}
+
 function onAdd() {
+  const tagIds = addTagIdsForCreate()
   if (isTasks.value) {
-    if (addTask(draft.value, props.date)) {
+    if (addTask(draft.value, props.date, tagIds)) {
       draft.value = ''
     }
     return
   }
-  if (addNote(draft.value, props.date)) {
+  if (addNote(draft.value, props.date, tagIds)) {
     draft.value = ''
   }
 }
@@ -66,6 +91,7 @@ function openEditTask(task: JournalTask) {
   kind.value = 'tasks'
   editId.value = task.id
   editText.value = task.title
+  editTagIds.value = [...task.tagIds]
   editOpen.value = true
 }
 
@@ -73,18 +99,28 @@ function openEditNote(note: JournalNote) {
   kind.value = 'notes'
   editId.value = note.id
   editText.value = note.body
+  editTagIds.value = [...note.tagIds]
   editOpen.value = true
+}
+
+function toggleEditTag(tagId: string) {
+  if (editTagIds.value.includes(tagId)) {
+    editTagIds.value = editTagIds.value.filter(id => id !== tagId)
+    return
+  }
+  editTagIds.value = [...editTagIds.value, tagId]
 }
 
 function saveEdit() {
   if (!editId.value) return
   const ok = isTasks.value
-    ? updateTask(editId.value, editText.value)
-    : updateNote(editId.value, editText.value)
+    ? updateTask(editId.value, editText.value, editTagIds.value)
+    : updateNote(editId.value, editText.value, editTagIds.value)
   if (ok) {
     editOpen.value = false
     editId.value = null
     editText.value = ''
+    editTagIds.value = []
   }
 }
 </script>
@@ -152,12 +188,28 @@ function saveEdit() {
               :aria-label="`Toggle ${task.title}`"
               @update:model-value="toggleTaskDone(task.id)"
             />
-            <span
-              class="min-w-0 flex-1 text-sm"
-              :class="task.done ? 'text-muted line-through' : 'text-default'"
-            >
-              {{ task.title }}
-            </span>
+            <div class="min-w-0 flex-1 space-y-1">
+              <span
+                class="block text-sm"
+                :class="task.done ? 'text-muted line-through' : 'text-default'"
+              >
+                {{ task.title }}
+              </span>
+              <div
+                v-if="task.tagIds.length"
+                class="flex flex-wrap gap-1"
+              >
+                <UBadge
+                  v-for="tag in resolveTagBadges(task.tagIds)"
+                  :key="tag.id"
+                  :color="badgeColorMap[tag.color]"
+                  variant="subtle"
+                  size="xs"
+                >
+                  {{ tag.name }}
+                </UBadge>
+              </div>
+            </div>
             <div class="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
               <UButton
                 icon="i-lucide-pencil"
@@ -201,9 +253,25 @@ function saveEdit() {
               name="i-lucide-file-text"
               class="mt-1 size-4 shrink-0 text-muted"
             />
-            <p class="min-w-0 flex-1 text-sm text-default">
-              {{ note.body }}
-            </p>
+            <div class="min-w-0 flex-1 space-y-1">
+              <p class="text-sm text-default">
+                {{ note.body }}
+              </p>
+              <div
+                v-if="note.tagIds.length"
+                class="flex flex-wrap gap-1"
+              >
+                <UBadge
+                  v-for="tag in resolveTagBadges(note.tagIds)"
+                  :key="tag.id"
+                  :color="badgeColorMap[tag.color]"
+                  variant="subtle"
+                  size="xs"
+                >
+                  {{ tag.name }}
+                </UBadge>
+              </div>
+            </div>
             <div class="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
               <UButton
                 icon="i-lucide-pencil"
@@ -239,14 +307,37 @@ function saveEdit() {
       :title="isTasks ? 'Edit task' : 'Edit note'"
     >
       <template #body>
-        <UInput
-          v-model="editText"
-          :placeholder="placeholder"
-          autofocus
-          size="lg"
-          class="w-full"
-          @keydown.enter.prevent="saveEdit"
-        />
+        <div class="space-y-4">
+          <UInput
+            v-model="editText"
+            :placeholder="placeholder"
+            autofocus
+            size="lg"
+            class="w-full"
+            @keydown.enter.prevent="saveEdit"
+          />
+
+          <UFormField
+            v-if="tags.length"
+            label="Tags"
+          >
+            <div class="flex flex-wrap gap-2">
+              <label
+                v-for="tag in tags"
+                :key="tag.id"
+                class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-default px-2.5 py-1.5 text-sm transition"
+                :class="editTagIds.includes(tag.id) ? 'bg-elevated' : 'hover:bg-elevated/50'"
+              >
+                <UCheckbox
+                  :model-value="editTagIds.includes(tag.id)"
+                  :aria-label="`Toggle ${tag.name} tag`"
+                  @update:model-value="toggleEditTag(tag.id)"
+                />
+                <span>{{ tag.name }}</span>
+              </label>
+            </div>
+          </UFormField>
+        </div>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TagColor } from '~/types/journal'
+
 const {
   totalTasksCount,
   completedTodayCount,
@@ -6,8 +8,24 @@ const {
   notesThisWeekCount,
   todayTasks,
   recentNotes,
-  toggleTaskDone
+  toggleTaskDone,
+  getTagById
 } = usePlaceholderJournal()
+
+const badgeColorMap: Record<TagColor, 'primary' | 'success' | 'warning' | 'info' | 'error' | 'neutral'> = {
+  primary: 'primary',
+  success: 'success',
+  warning: 'warning',
+  info: 'info',
+  error: 'error',
+  neutral: 'neutral'
+}
+
+function resolveTagBadges(tagIds: string[]) {
+  return tagIds
+    .map(id => getTagById(id))
+    .filter((tag): tag is NonNullable<typeof tag> => !!tag)
+}
 
 const stats = computed(() => [
   {
@@ -111,12 +129,28 @@ const stats = computed(() => [
               :aria-label="`Toggle ${task.title}`"
               @update:model-value="toggleTaskDone(task.id)"
             />
-            <span
-              class="min-w-0 flex-1 text-sm"
-              :class="task.done ? 'text-muted line-through' : 'text-default'"
-            >
-              {{ task.title }}
-            </span>
+            <div class="min-w-0 flex-1 space-y-1">
+              <span
+                class="block text-sm"
+                :class="task.done ? 'text-muted line-through' : 'text-default'"
+              >
+                {{ task.title }}
+              </span>
+              <div
+                v-if="task.tagIds.length"
+                class="flex flex-wrap gap-1"
+              >
+                <UBadge
+                  v-for="tag in resolveTagBadges(task.tagIds)"
+                  :key="tag.id"
+                  :color="badgeColorMap[tag.color]"
+                  variant="subtle"
+                  size="xs"
+                >
+                  {{ tag.name }}
+                </UBadge>
+              </div>
+            </div>
           </li>
         </ul>
         <UEmpty
