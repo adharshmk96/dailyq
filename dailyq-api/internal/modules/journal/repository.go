@@ -185,20 +185,30 @@ func (r *repository) SaveTag(ctx context.Context, tag *Tag) error {
 }
 
 func (r *repository) SaveTask(ctx context.Context, task *Task) error {
+	tags := task.Tags
+	task.Tags = nil
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(task).Error; err != nil {
 			return err
 		}
-		return tx.Model(task).Association("Tags").Replace(task.Tags)
+		if len(tags) == 0 {
+			return nil
+		}
+		return tx.Model(task).Association("Tags").Replace(tags)
 	})
 }
 
 func (r *repository) SaveNote(ctx context.Context, note *Note) error {
+	tags := note.Tags
+	note.Tags = nil
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(note).Error; err != nil {
 			return err
 		}
-		return tx.Model(note).Association("Tags").Replace(note.Tags)
+		if len(tags) == 0 {
+			return nil
+		}
+		return tx.Model(note).Association("Tags").Replace(tags)
 	})
 }
 
