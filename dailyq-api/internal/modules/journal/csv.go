@@ -250,14 +250,17 @@ func isBlankRow(row csvRow) bool {
 	return row.Type == "" && row.ID == "" && row.Task == "" && row.Note == ""
 }
 
-func validateUUID(id string) error {
+// resolveImportID returns the row id for import. Empty ids are assigned a new UUID
+// so the row creates a new entry instead of failing validation.
+func resolveImportID(id string) (string, error) {
+	id = strings.TrimSpace(id)
 	if id == "" {
-		return fmt.Errorf("id is required")
+		return uuid.NewString(), nil
 	}
 	if _, err := uuid.Parse(id); err != nil {
-		return fmt.Errorf("id must be a valid UUID")
+		return "", fmt.Errorf("id must be a valid UUID")
 	}
-	return nil
+	return id, nil
 }
 
 func validateTagColor(color string) (string, error) {

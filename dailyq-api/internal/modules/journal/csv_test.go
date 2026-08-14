@@ -3,6 +3,8 @@ package journal
 import (
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestEncodeParseRoundTrip(t *testing.T) {
@@ -74,4 +76,37 @@ world",,,
 	if len(rows) != 1 || rows[0].Note != "hello\nworld" {
 		t.Fatalf("unexpected note: %+v", rows[0])
 	}
+}
+
+func TestResolveImportID(t *testing.T) {
+	t.Run("empty generates uuid", func(t *testing.T) {
+		id, err := resolveImportID("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if id == "" {
+			t.Fatal("expected generated id")
+		}
+		if _, err := uuid.Parse(id); err != nil {
+			t.Fatalf("generated id is not a valid uuid: %v", err)
+		}
+	})
+
+	t.Run("valid uuid preserved", func(t *testing.T) {
+		want := "11111111-1111-1111-1111-111111111111"
+		id, err := resolveImportID(want)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if id != want {
+			t.Fatalf("expected %q, got %q", want, id)
+		}
+	})
+
+	t.Run("invalid uuid rejected", func(t *testing.T) {
+		_, err := resolveImportID("not-a-uuid")
+		if err == nil || !strings.Contains(err.Error(), "valid UUID") {
+			t.Fatalf("expected invalid uuid error, got %v", err)
+		}
+	})
 }
