@@ -26,7 +26,8 @@ func (s *Service) ExportCSV(ctx context.Context, userID string) ([]byte, error) 
 }
 
 // ImportCSV upserts tags, tasks, and notes from a CSV export. Rows with the same
-// id as an existing entity are updated instead of duplicated.
+// id as an existing entity are updated instead of duplicated. Rows with an empty id
+// create new entities.
 func (s *Service) ImportCSV(ctx context.Context, userID string, data []byte) (*ImportResult, error) {
 	rows, err := ParseImport(data)
 	if err != nil {
@@ -80,7 +81,8 @@ func (s *Service) ImportCSV(ctx context.Context, userID string, data []byte) (*I
 }
 
 func (s *Service) importTagRow(ctx context.Context, userID string, row csvRow, tagByName map[string]string, result *ImportResult) error {
-	if err := validateUUID(row.ID); err != nil {
+	id, err := resolveImportID(row.ID)
+	if err != nil {
 		return err
 	}
 	name := strings.TrimSpace(row.Task)
@@ -95,13 +97,13 @@ func (s *Service) importTagRow(ctx context.Context, userID string, row csvRow, t
 		return fmt.Errorf("tag rows must not include note or tags columns")
 	}
 
-	_, err = s.repo.GetTag(ctx, userID, row.ID)
+	_, err = s.repo.GetTag(ctx, userID, id)
 	exists := err == nil
 	if err != nil && err != ErrTagNotFound {
 		return err
 	}
 
-	taken, err := s.repo.TagNameTaken(ctx, userID, name, row.ID)
+	taken, err := s.repo.TagNameTaken(ctx, userID, name, id)
 	if err != nil {
 		return err
 	}
@@ -109,12 +111,12 @@ func (s *Service) importTagRow(ctx context.Context, userID string, row csvRow, t
 		return fmt.Errorf("tag name %q is already taken", name)
 	}
 
-	tag := &Tag{ID: row.ID, UserID: userID, Name: name, Color: color}
+	tag := &Tag{ID: id, UserID: userID, Name: name, Color: color}
 	if err := s.repo.SaveTag(ctx, tag); err != nil {
 		return err
 	}
 
-	tagByName[strings.ToLower(name)] = row.ID
+	tagByName[strings.ToLower(name)] = id
 	if exists {
 		result.Updated.Tags++
 	} else {
@@ -124,7 +126,8 @@ func (s *Service) importTagRow(ctx context.Context, userID string, row csvRow, t
 }
 
 func (s *Service) importTaskRow(ctx context.Context, userID string, row csvRow, tagByName map[string]string, result *ImportResult) error {
-	if err := validateUUID(row.ID); err != nil {
+	id, err := resolveImportID(row.ID)
+	if err != nil {
 		return err
 	}
 	title := strings.TrimSpace(row.Task)
@@ -148,14 +151,14 @@ func (s *Service) importTaskRow(ctx context.Context, userID string, row csvRow, 
 		return err
 	}
 
-	_, err = s.repo.GetTask(ctx, userID, row.ID)
+	_, err = s.repo.GetTask(ctx, userID, id)
 	exists := err == nil
 	if err != nil && err != ErrTaskNotFound {
 		return err
 	}
 
 	task := &Task{
-		ID:     row.ID,
+		ID:     id,
 		UserID: userID,
 		Title:  title,
 		Done:   done,
@@ -175,7 +178,8 @@ func (s *Service) importTaskRow(ctx context.Context, userID string, row csvRow, 
 }
 
 func (s *Service) importNoteRow(ctx context.Context, userID string, row csvRow, tagByName map[string]string, result *ImportResult) error {
-	if err := validateUUID(row.ID); err != nil {
+	id, err := resolveImportID(row.ID)
+	if err != nil {
 		return err
 	}
 	body := strings.TrimSpace(row.Note)
@@ -197,14 +201,14 @@ func (s *Service) importNoteRow(ctx context.Context, userID string, row csvRow, 
 		return err
 	}
 
-	_, err = s.repo.GetNote(ctx, userID, row.ID)
+	_, err = s.repo.GetNote(ctx, userID, id)
 	exists := err == nil
 	if err != nil && err != ErrNoteNotFound {
 		return err
 	}
 
 	note := &Note{
-		ID:     row.ID,
+		ID:     id,
 		UserID: userID,
 		Body:   body,
 		Date:   row.Date,
