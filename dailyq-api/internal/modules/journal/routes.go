@@ -17,6 +17,8 @@ func (m *Module) RegisterRoutes(rg *gin.RouterGroup) {
 	group.GET("/overview", m.Handler.Overview)
 	group.GET("/entries", m.Handler.Entries)
 	group.GET("/dates", m.Handler.Dates)
+	group.GET("/export", m.Handler.Export)
+	group.POST("/import", m.Handler.Import)
 
 	group.GET("/tags", m.Handler.ListTags)
 	group.POST("/tags", m.Handler.CreateTag)

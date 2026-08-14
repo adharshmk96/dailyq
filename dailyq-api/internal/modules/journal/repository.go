@@ -17,6 +17,14 @@ type Repository interface {
 	TagNameTaken(ctx context.Context, userID, name, exceptID string) (bool, error)
 	// TagsByIDs returns only the tags among ids that the user actually owns.
 	TagsByIDs(ctx context.Context, userID string, ids []string) ([]Tag, error)
+	GetTagByName(ctx context.Context, userID, name string) (*Tag, error)
+
+	ListAllTasks(ctx context.Context, userID string) ([]Task, error)
+	ListAllNotes(ctx context.Context, userID string) ([]Note, error)
+
+	SaveTag(ctx context.Context, tag *Tag) error
+	SaveTask(ctx context.Context, task *Task) error
+	SaveNote(ctx context.Context, note *Note) error
 
 	CountTasks(ctx context.Context, userID string) (int64, error)
 	CountTasksDoneOn(ctx context.Context, userID, date string) (int64, error)
@@ -137,6 +145,61 @@ func (r *repository) TagsByIDs(ctx context.Context, userID string, ids []string)
 		Where("user_id = ? AND id IN ?", userID, ids).
 		Find(&tags).Error
 	return tags, err
+}
+
+func (r *repository) GetTagByName(ctx context.Context, userID, name string) (*Tag, error) {
+	var tag Tag
+	err := r.db.WithContext(ctx).
+		First(&tag, "user_id = ? AND name = ? COLLATE NOCASE", userID, name).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTagNotFound
+		}
+		return nil, err
+	}
+	return &tag, nil
+}
+
+func (r *repository) ListAllTasks(ctx context.Context, userID string) ([]Task, error) {
+	var tasks []Task
+	err := r.db.WithContext(ctx).
+		Preload("Tags").
+		Where("user_id = ?", userID).
+		Order("date asc, created_at asc").
+		Find(&tasks).Error
+	return tasks, err
+}
+
+func (r *repository) ListAllNotes(ctx context.Context, userID string) ([]Note, error) {
+	var notes []Note
+	err := r.db.WithContext(ctx).
+		Preload("Tags").
+		Where("user_id = ?", userID).
+		Order("date asc, created_at asc").
+		Find(&notes).Error
+	return notes, err
+}
+
+func (r *repository) SaveTag(ctx context.Context, tag *Tag) error {
+	return r.db.WithContext(ctx).Save(tag).Error
+}
+
+func (r *repository) SaveTask(ctx context.Context, task *Task) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(task).Error; err != nil {
+			return err
+		}
+		return tx.Model(task).Association("Tags").Replace(task.Tags)
+	})
+}
+
+func (r *repository) SaveNote(ctx context.Context, note *Note) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(note).Error; err != nil {
+			return err
+		}
+		return tx.Model(note).Association("Tags").Replace(note.Tags)
+	})
 }
 
 // ---- counters ----

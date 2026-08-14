@@ -68,6 +68,54 @@ function comingSoon(title: string) {
   })
 }
 
+const { exportCsv, importCsv, exportPending, importPending } = useJournalDataTransfer()
+const importInputRef = ref<HTMLInputElement | null>(null)
+
+function formatImportSummary(result: ImportResult): string {
+  const created = result.created.tags + result.created.tasks + result.created.notes
+  const updated = result.updated.tags + result.updated.tasks + result.updated.notes
+  const parts: string[] = []
+  if (created > 0) parts.push(`${created} created`)
+  if (updated > 0) parts.push(`${updated} updated`)
+  if (result.skipped > 0) parts.push(`${result.skipped} skipped`)
+  return parts.length > 0 ? parts.join(', ') : 'No changes'
+}
+
+async function onExportData() {
+  try {
+    await exportCsv()
+    toast.add({
+      title: 'Export complete',
+      description: 'Your journal data was downloaded as CSV.',
+      icon: 'i-lucide-download'
+    })
+  } catch {
+    // useJournalDataTransfer already shows the error toast
+  }
+}
+
+function onImportClick() {
+  importInputRef.value?.click()
+}
+
+async function onImportFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  const result = await importCsv(file)
+  if (!result) return
+
+  const color = result.errors.length > 0 ? 'warning' : 'success'
+  toast.add({
+    title: 'Import complete',
+    description: formatImportSummary(result),
+    icon: result.errors.length > 0 ? 'i-lucide-alert-triangle' : 'i-lucide-upload',
+    color
+  })
+}
+
 function resetPasswordForm() {
   currentPassword.value = ''
   newPassword.value = ''
@@ -138,14 +186,6 @@ async function onChangePassword() {
       color: 'error'
     })
   }
-}
-
-function onExportData() {
-  comingSoon('Export data')
-}
-
-function onImportData() {
-  comingSoon('Import data')
 }
 
 function onSaveNotifications() {
@@ -326,12 +366,20 @@ function onSaveNotifications() {
         >
           <div>
             <h2 class="text-sm font-medium text-highlighted">
-              Local data
+              Journal data
             </h2>
             <p class="mt-1 text-sm text-muted">
-              Journal data is stored as placeholder data in this browser session only. Export and import will be available later.
+              Export your tasks, notes, and tags as CSV, or import a previously exported file. Re-importing the same file updates existing entries by id — no duplicates.
             </p>
           </div>
+
+          <input
+            ref="importInputRef"
+            type="file"
+            accept=".csv,text/csv"
+            class="hidden"
+            @change="onImportFileSelected"
+          >
 
           <div class="flex flex-wrap gap-2">
             <UButton
@@ -339,6 +387,7 @@ function onSaveNotifications() {
               icon="i-lucide-download"
               color="neutral"
               variant="soft"
+              :loading="exportPending"
               @click="onExportData"
             />
             <UButton
@@ -346,7 +395,8 @@ function onSaveNotifications() {
               icon="i-lucide-upload"
               color="neutral"
               variant="soft"
-              @click="onImportData"
+              :loading="importPending"
+              @click="onImportClick"
             />
           </div>
         </UCard>
