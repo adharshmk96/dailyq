@@ -2,6 +2,13 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { JournalTag, TagColor } from '~/types/journal'
 
+const props = withDefaults(defineProps<{
+  /** Hide outer card chrome when nested inside CollapsibleSection. */
+  embedded?: boolean
+}>(), {
+  embedded: false
+})
+
 const { tags, addTag, updateTag, deleteTag } = useJournalTags()
 const { activeTagId, toggleTag } = useTagFilter()
 
@@ -16,6 +23,11 @@ const colorDotClass: Record<TagColor, string> = {
   error: 'bg-error',
   neutral: 'bg-neutral'
 }
+
+const activeTagName = computed(() => {
+  if (!activeTagId.value) return null
+  return tags.value.find(tag => tag.id === activeTagId.value)?.name ?? null
+})
 
 function openCreate() {
   editingTag.value = null
@@ -66,11 +78,22 @@ function menuItems(tag: JournalTag): DropdownMenuItem[][] {
 </script>
 
 <template>
-  <UCard :ui="{ body: 'space-y-3 p-4 sm:p-5' }">
+  <UCard
+    :class="embedded ? 'border-0 shadow-none lg:border lg:shadow-sm' : undefined"
+    :ui="{ body: 'space-y-3 p-3 sm:p-4 lg:p-5' }"
+  >
     <div class="flex items-center justify-between gap-2">
-      <h2 class="text-sm font-semibold text-highlighted">
-        Tag
-      </h2>
+      <div class="min-w-0">
+        <h2 class="text-sm font-semibold text-highlighted">
+          Tag
+        </h2>
+        <p
+          v-if="activeTagName"
+          class="truncate text-xs text-primary"
+        >
+          Filtering: {{ activeTagName }}
+        </p>
+      </div>
       <UButton
         icon="i-lucide-plus"
         color="neutral"

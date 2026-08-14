@@ -8,10 +8,13 @@ const props = withDefaults(defineProps<{
   /** ISO date for the calendar board; null for the undated General board. */
   date?: string | null
   activeTagId?: string | null
+  /** Prioritize task/note content on small screens (compact header). */
+  mobilePriority?: boolean
 }>(), {
   description: undefined,
   date: null,
-  activeTagId: null
+  activeTagId: null,
+  mobilePriority: false
 })
 
 const boardDate = computed(() => props.date ?? null)
@@ -145,15 +148,25 @@ async function saveEdit() {
 </script>
 
 <template>
-  <div class="space-y-5">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-highlighted">
+  <div
+    class="space-y-4 lg:space-y-5"
+    :class="mobilePriority ? 'min-w-0' : undefined"
+  >
+    <div
+      class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+      :class="mobilePriority ? 'gap-2 sm:gap-3' : 'gap-3'"
+    >
+      <div class="min-w-0">
+        <h1
+          class="truncate font-semibold tracking-tight text-highlighted"
+          :class="mobilePriority ? 'text-lg sm:text-2xl' : 'text-2xl'"
+        >
           {{ title }}
         </h1>
         <p
           v-if="description"
-          class="mt-1 text-sm text-muted"
+          class="mt-0.5 text-sm text-muted"
+          :class="mobilePriority ? 'hidden sm:block' : undefined"
         >
           {{ description }}
         </p>
@@ -166,27 +179,28 @@ async function saveEdit() {
         color="neutral"
         variant="pill"
         size="sm"
-        class="w-full sm:w-auto"
+        class="w-full shrink-0 sm:w-auto"
       />
     </div>
 
-    <UCard :ui="{ body: 'space-y-4 p-4 sm:p-5' }">
+    <UCard :ui="{ body: 'space-y-4 p-3 sm:p-4 lg:p-5' }">
       <form
-        class="flex gap-2"
+        class="flex flex-col gap-2 sm:flex-row"
         @submit.prevent="onAdd"
       >
         <UInput
           v-model="draft"
           :placeholder="placeholder"
           icon="i-lucide-plus"
-          class="flex-1"
-          size="lg"
+          class="min-w-0 flex-1"
+          size="md"
         />
         <UButton
           type="submit"
           :label="addLabel"
           icon="i-lucide-plus"
-          size="lg"
+          size="md"
+          class="w-full shrink-0 sm:w-auto"
           :loading="saving"
           :disabled="!draft.trim()"
         />
@@ -208,22 +222,28 @@ async function saveEdit() {
       <template v-else-if="isTasks">
         <ul
           v-if="tasks.length"
-          class="divide-y divide-default"
+          class="space-y-2 sm:space-y-0 sm:divide-y sm:divide-default"
         >
           <li
             v-for="task in tasks"
             :key="task.id"
-            class="group flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+            class="group flex items-start gap-3 rounded-xl border border-default p-3 transition sm:rounded-none sm:border-0 sm:p-0 sm:py-3 sm:first:pt-0 sm:last:pb-0"
+            :class="task.done
+              ? 'border-default/60 bg-elevated/30 opacity-80 sm:bg-transparent sm:opacity-100'
+              : 'border-primary/20 bg-primary/5 shadow-sm sm:border-0 sm:bg-transparent sm:shadow-none'"
           >
             <UCheckbox
               :model-value="task.done"
+              class="mt-0.5 shrink-0"
               :aria-label="`Toggle ${task.title}`"
               @update:model-value="toggleTaskDone(task.id)"
             />
-            <div class="min-w-0 flex-1 space-y-1">
+            <div class="min-w-0 flex-1 space-y-1.5">
               <span
-                class="block text-sm"
-                :class="task.done ? 'text-muted line-through' : 'text-default'"
+                class="block text-sm leading-snug sm:text-sm"
+                :class="task.done
+                  ? 'text-muted line-through'
+                  : 'font-medium text-highlighted'"
               >
                 {{ task.title }}
               </span>
@@ -274,19 +294,19 @@ async function saveEdit() {
       <template v-else>
         <ul
           v-if="notes.length"
-          class="divide-y divide-default"
+          class="space-y-2 sm:space-y-0 sm:divide-y sm:divide-default"
         >
           <li
             v-for="note in notes"
             :key="note.id"
-            class="group flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+            class="group flex items-start gap-3 rounded-xl border border-default bg-elevated/40 p-3 transition sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:py-3 sm:first:pt-0 sm:last:pb-0"
           >
             <UIcon
               name="i-lucide-file-text"
-              class="mt-1 size-4 shrink-0 text-muted"
+              class="mt-0.5 size-4 shrink-0 text-primary"
             />
-            <div class="min-w-0 flex-1 space-y-1">
-              <p class="text-sm text-default">
+            <div class="min-w-0 flex-1 space-y-1.5">
+              <p class="text-sm leading-relaxed text-default">
                 {{ note.body }}
               </p>
               <div
