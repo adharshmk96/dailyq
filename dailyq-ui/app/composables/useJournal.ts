@@ -30,9 +30,20 @@ interface ApiEntries {
 }
 
 export const TAGS_KEY = 'journal-tags'
-export const ENTRIES_KEY = 'journal-entries'
+/** Prefix for per-scope entry caches (general + each calendar day). */
+export const ENTRIES_KEY_PREFIX = 'journal-entries'
 export const DATES_KEY = 'journal-dates'
 export const OVERVIEW_KEY = 'dashboard-overview'
+
+/** Stable Nuxt data key for one board scope (general or a specific ISO date). */
+export function entriesKeyForDate(date: string | null) {
+  return `${ENTRIES_KEY_PREFIX}:${date ?? 'general'}`
+}
+
+/** Clears every cached entries board so mounted pages refetch. */
+export function refreshAllJournalEntries() {
+  return clearNuxtData((key) => key.startsWith(`${ENTRIES_KEY_PREFIX}:`))
+}
 
 function toTag(tag: ApiTag): JournalTag {
   return { id: tag.id, name: tag.name, color: tag.color }
@@ -144,7 +155,7 @@ export function useJournalTags() {
       await api(`/journal/tags/${id}`, { method: 'DELETE' })
       data.value = tags.value.filter(t => t.id !== id)
       // Items still carry the removed id in their local copy.
-      await Promise.all([refreshNuxtData(ENTRIES_KEY), refreshDerived()])
+      await Promise.all([refreshAllJournalEntries(), refreshDerived()])
       return true
     } catch (err) {
       fail(err, 'Could not delete tag')
@@ -165,15 +176,22 @@ export function useJournalBoard(date: Ref<string | null>) {
   const { fail } = useJournalFeedback()
 
   const { data, pending, error, refresh } = useAsyncData<ApiEntries>(
-    ENTRIES_KEY,
+    () => entriesKeyForDate(date.value),
     () => api<ApiEntries>('/journal/entries', {
       params: date.value ? { date: date.value } : {}
     }),
     { watch: [date], dedupe: 'defer' }
   )
 
-  const tasks = computed(() => (data.value?.tasks ?? []).map(toTask))
-  const notes = computed(() => (data.value?.notes ?? []).map(toNote))
+  const matchesScope = computed(() => (data.value?.date ?? null) === date.value)
+
+  const tasks = computed(() =>
+    matchesScope.value ? (data.value?.tasks ?? []).map(toTask) : []
+  )
+  const notes = computed(() =>
+    matchesScope.value ? (data.value?.notes ?? []).map(toNote) : []
+  )
+  const isLoading = computed(() => pending.value || !matchesScope.value)
 
   /**
    * useAsyncData hands back a shallow ref, so every local write has to swap the
@@ -309,7 +327,7 @@ export function useJournalBoard(date: Ref<string | null>) {
   return {
     tasks,
     notes,
-    pending,
+    pending: isLoading,
     error,
     refresh,
     addTask,

@@ -1,5 +1,5 @@
 import type { ImportResult } from '~/types/journal'
-import { DATES_KEY, ENTRIES_KEY, OVERVIEW_KEY, TAGS_KEY } from '~/composables/useJournal'
+import { DATES_KEY, OVERVIEW_KEY, refreshAllJournalEntries, TAGS_KEY } from '~/composables/useJournal'
 
 export function useJournalDataTransfer() {
   const api = useApiFetch()
@@ -51,7 +51,10 @@ export function useJournalDataTransfer() {
         body: form
       })
 
-      await refreshNuxtData([TAGS_KEY, DATES_KEY, ENTRIES_KEY, OVERVIEW_KEY])
+      await Promise.all([
+        refreshNuxtData([TAGS_KEY, DATES_KEY, OVERVIEW_KEY]),
+        refreshAllJournalEntries()
+      ])
       return result
     } catch (err) {
       fail(err, 'Could not import data')
