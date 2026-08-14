@@ -26,6 +26,7 @@ var (
 	ErrUnknownTag     = newError(http.StatusBadRequest, "unknown_tag", "one or more tags do not exist")
 	ErrInvalidDate    = newError(http.StatusBadRequest, "invalid_date", "date must be in YYYY-MM-DD format")
 	ErrInvalidRequest = newError(http.StatusBadRequest, "invalid_request", "request payload is invalid")
+	ErrInvalidCSV     = newError(http.StatusBadRequest, "invalid_csv", "csv file is invalid")
 	ErrInternal       = newError(http.StatusInternalServerError, "internal_error", "something went wrong")
 )
 

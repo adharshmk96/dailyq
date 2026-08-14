@@ -137,6 +137,27 @@ type OverviewStats struct {
 	NotesThisWeek  int64 `json:"notes_this_week"`
 }
 
+// ImportCounts tallies created or updated entities during a CSV import.
+type ImportCounts struct {
+	Tags  int `json:"tags"`
+	Tasks int `json:"tasks"`
+	Notes int `json:"notes"`
+}
+
+// ImportRowError describes one row that could not be imported.
+type ImportRowError struct {
+	Row     int    `json:"row"`
+	Message string `json:"message"`
+}
+
+// ImportResult is returned after a CSV import finishes.
+type ImportResult struct {
+	Created ImportCounts     `json:"created"`
+	Updated ImportCounts     `json:"updated"`
+	Skipped int              `json:"skipped"`
+	Errors  []ImportRowError `json:"errors"`
+}
+
 // OverviewResponse is everything the overview page renders in one round trip.
 type OverviewResponse struct {
 	Today       string         `json:"today"`

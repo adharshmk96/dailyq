@@ -1,6 +1,7 @@
 package journal
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -43,6 +44,52 @@ func (h *Handler) Entries(c *gin.Context) {
 // GET /api/v1/journal/dates
 func (h *Handler) Dates(c *gin.Context) {
 	res, err := h.svc.Dates(c.Request.Context(), auth.UserIDFrom(c))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+// GET /api/v1/journal/export
+func (h *Handler) Export(c *gin.Context) {
+	data, err := h.svc.ExportCSV(c.Request.Context(), auth.UserIDFrom(c))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", `attachment; filename="dailyq-export.csv"`)
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
+}
+
+// POST /api/v1/journal/import
+// Accepts multipart field "file" or a raw text/csv body.
+func (h *Handler) Import(c *gin.Context) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxImportBytes)
+
+	var data []byte
+	var err error
+
+	file, _, formErr := c.Request.FormFile("file")
+	if formErr == nil {
+		defer file.Close()
+		data, err = io.ReadAll(file)
+	} else {
+		data, err = io.ReadAll(c.Request.Body)
+	}
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": &Error{
+			Status:  http.StatusBadRequest,
+			Code:    ErrInvalidRequest.Code,
+			Message: "could not read upload",
+		}})
+		return
+	}
+
+	res, err := h.svc.ImportCSV(c.Request.Context(), auth.UserIDFrom(c), data)
 	if err != nil {
 		respondError(c, err)
 		return

@@ -26,3 +26,21 @@ export interface JournalNote {
 }
 
 export type ItemKind = 'tasks' | 'notes'
+
+export interface ImportCounts {
+  tags: number
+  tasks: number
+  notes: number
+}
+
+export interface ImportRowError {
+  row: number
+  message: string
+}
+
+export interface ImportResult {
+  created: ImportCounts
+  updated: ImportCounts
+  skipped: number
+  errors: ImportRowError[]
+}
