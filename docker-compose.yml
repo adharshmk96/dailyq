@@ -14,10 +14,6 @@ services:
       DAILYQ_LOG_FORMAT: json
     volumes:
       - dailyq-data:/data
-    ports:
-      # Dokploy routes through Traefik on the internal network; this published
-      # port is mainly for running the stack locally.
-      - "${DAILYQ_PORT:-8080}:8080"
 
 volumes:
   dailyq-data:
