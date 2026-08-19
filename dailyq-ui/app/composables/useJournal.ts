@@ -238,19 +238,42 @@ export function useJournalBoard(date: Ref<string | null>) {
     }
   }
 
-  async function updateTask(id: string, title: string, tagIds?: string[]) {
+  function replaceOrRemoveTask(saved: ApiTask) {
+    const list = data.value?.tasks ?? []
+    patchEntries({
+      tasks: saved.date === date.value
+        ? list.map(t => (t.id === saved.id ? saved : t))
+        : list.filter(t => t.id !== saved.id)
+    })
+  }
+
+  function replaceOrRemoveNote(saved: ApiNote) {
+    const list = data.value?.notes ?? []
+    patchEntries({
+      notes: saved.date === date.value
+        ? list.map(n => (n.id === saved.id ? saved : n))
+        : list.filter(n => n.id !== saved.id)
+    })
+  }
+
+  async function updateTask(id: string, title: string, tagIds?: string[], itemDate?: string | null) {
     const trimmed = title.trim()
     if (!trimmed) return false
 
     const current = data.value?.tasks.find(t => t.id === id)
     if (!current) return false
 
+    const nextDate = itemDate !== undefined ? itemDate : current.date
+
     try {
       const saved = await api<ApiTask>(`/journal/tasks/${id}`, {
         method: 'PATCH',
-        body: { title: trimmed, date: current.date, tag_ids: tagIds ?? current.tag_ids }
+        body: { title: trimmed, date: nextDate, tag_ids: tagIds ?? current.tag_ids }
       })
-      patchEntries({ tasks: (data.value?.tasks ?? []).map(t => (t.id === id ? saved : t)) })
+      replaceOrRemoveTask(saved)
+      if (saved.date !== current.date) {
+        await refreshDerived()
+      }
       return true
     } catch (err) {
       fail(err, 'Could not update task')
@@ -258,19 +281,24 @@ export function useJournalBoard(date: Ref<string | null>) {
     }
   }
 
-  async function updateNote(id: string, body: string, tagIds?: string[]) {
+  async function updateNote(id: string, body: string, tagIds?: string[], itemDate?: string | null) {
     const trimmed = body.trim()
     if (!trimmed) return false
 
     const current = data.value?.notes.find(n => n.id === id)
     if (!current) return false
 
+    const nextDate = itemDate !== undefined ? itemDate : current.date
+
     try {
       const saved = await api<ApiNote>(`/journal/notes/${id}`, {
         method: 'PATCH',
-        body: { body: trimmed, date: current.date, tag_ids: tagIds ?? current.tag_ids }
+        body: { body: trimmed, date: nextDate, tag_ids: tagIds ?? current.tag_ids }
       })
-      patchEntries({ notes: (data.value?.notes ?? []).map(n => (n.id === id ? saved : n)) })
+      replaceOrRemoveNote(saved)
+      if (saved.date !== current.date) {
+        await refreshDerived()
+      }
       return true
     } catch (err) {
       fail(err, 'Could not update note')
