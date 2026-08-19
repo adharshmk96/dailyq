@@ -168,6 +168,18 @@ function goToToday() {
           class="hidden lg:block"
           :ui="{ body: 'flex justify-center p-4 sm:p-5' }"
         >
+          <template #header>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-highlighted">Calendar</span>
+              <UButton
+                label="Today"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                @click="goToToday"
+              />
+            </div>
+          </template>
           <UCalendar
             v-model="selected"
             size="lg"

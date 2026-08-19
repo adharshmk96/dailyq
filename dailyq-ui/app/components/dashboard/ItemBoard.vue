@@ -42,7 +42,12 @@ const draft = ref('')
 const editOpen = ref(false)
 const editId = ref<string | null>(null)
 const editText = ref('')
+const editDate = ref<string | null>(null)
 const editTagIds = ref<string[]>([])
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10)
+}
 
 const kindItems = computed<TabsItem[]>(() => [
   {
@@ -107,6 +112,7 @@ function openEditTask(task: JournalTask) {
   kind.value = 'tasks'
   editId.value = task.id
   editText.value = task.title
+  editDate.value = task.date
   editTagIds.value = [...task.tagIds]
   editOpen.value = true
 }
@@ -115,6 +121,7 @@ function openEditNote(note: JournalNote) {
   kind.value = 'notes'
   editId.value = note.id
   editText.value = note.body
+  editDate.value = note.date
   editTagIds.value = [...note.tagIds]
   editOpen.value = true
 }
@@ -133,12 +140,13 @@ async function saveEdit() {
   saving.value = true
   try {
     const ok = isTasks.value
-      ? await updateTask(editId.value, editText.value, editTagIds.value)
-      : await updateNote(editId.value, editText.value, editTagIds.value)
+      ? await updateTask(editId.value, editText.value, editTagIds.value, editDate.value)
+      : await updateNote(editId.value, editText.value, editTagIds.value, editDate.value)
     if (ok) {
       editOpen.value = false
       editId.value = null
       editText.value = ''
+      editDate.value = null
       editTagIds.value = []
     }
   } finally {
@@ -368,6 +376,31 @@ async function saveEdit() {
             class="w-full"
             @keydown.enter.prevent="saveEdit"
           />
+
+          <UFormField label="Date">
+            <div class="flex flex-wrap items-center gap-2">
+              <UInput
+                :model-value="editDate ?? ''"
+                type="date"
+                class="min-w-0 flex-1"
+                @update:model-value="editDate = $event || null"
+              />
+              <UButton
+                label="Today"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="editDate = todayIso()"
+              />
+              <UButton
+                label="General"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="editDate = null"
+              />
+            </div>
+          </UFormField>
 
           <UFormField
             v-if="tags.length"
