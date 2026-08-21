@@ -24,4 +24,5 @@ func (m *Module) RegisterRoutes(rg *gin.RouterGroup) {
 	protected.POST("/logout", m.Handler.Logout)
 	protected.POST("/change-password", m.Handler.ChangePassword)
 	protected.GET("/me", m.Handler.Me)
+	protected.PATCH("/me", m.Handler.UpdateProfile)
 }

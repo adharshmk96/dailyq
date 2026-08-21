@@ -138,6 +138,14 @@ export function useAuth() {
     })
   }
 
+  async function updateProfile(payload: { name: string, email: string }) {
+    return withPending(async () => {
+      const updated = await api<AuthUser>('/auth/me', { method: 'PATCH', body: payload })
+      user.value = updated
+      return updated
+    })
+  }
+
   /** Loads the current user, clearing the session if the token is no longer valid. */
   async function fetchMe(): Promise<AuthUser | null> {
     if (!token.value) {
@@ -168,6 +176,7 @@ export function useAuth() {
     forgotPassword,
     resetPassword,
     changePassword,
+    updateProfile,
     fetchMe,
     clearSession
   }
