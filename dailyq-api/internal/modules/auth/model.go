@@ -72,6 +72,11 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=8,max=128"`
 }
 
+type UpdateProfileRequest struct {
+	Name  string `json:"name" binding:"required,min=1,max=255"`
+	Email string `json:"email" binding:"required,email"`
+}
+
 type ForgotPasswordRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }

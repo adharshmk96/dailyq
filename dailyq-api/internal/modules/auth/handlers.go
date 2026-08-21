@@ -115,6 +115,22 @@ func (h *Handler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, NewUserResponse(user))
 }
 
+// PATCH /api/v1/auth/me
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	var req UpdateProfileRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	user, err := h.svc.UpdateProfile(c.Request.Context(), UserIDFrom(c), req)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, NewUserResponse(user))
+}
+
 func bindJSON(c *gin.Context, target any) bool {
 	if err := c.ShouldBindJSON(target); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": &Error{

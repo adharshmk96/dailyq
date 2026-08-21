@@ -14,6 +14,7 @@ type Repository interface {
 	GetUserByID(ctx context.Context, id string) (*User, error)
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	UpdateUserPassword(ctx context.Context, userID, passwordHash string) error
+	UpdateUserProfile(ctx context.Context, userID, name, email string) error
 
 	CreateSession(ctx context.Context, session *Session) error
 	GetSessionByID(ctx context.Context, id string) (*Session, error)
@@ -61,6 +62,16 @@ func (r *repository) UpdateUserPassword(ctx context.Context, userID, passwordHas
 		Model(&User{}).
 		Where("id = ?", userID).
 		Update("password_hash", passwordHash).Error
+}
+
+func (r *repository) UpdateUserProfile(ctx context.Context, userID, name, email string) error {
+	return r.db.WithContext(ctx).
+		Model(&User{}).
+		Where("id = ?", userID).
+		Updates(map[string]any{
+			"name":  name,
+			"email": email,
+		}).Error
 }
 
 func (r *repository) CreateSession(ctx context.Context, session *Session) error {

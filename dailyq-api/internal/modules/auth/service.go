@@ -220,6 +220,41 @@ func (s *Service) Me(ctx context.Context, userID string) (*User, error) {
 	return s.repo.GetUserByID(ctx, userID)
 }
 
+// UpdateProfile updates the authenticated user's display name and email.
+func (s *Service) UpdateProfile(ctx context.Context, userID string, req UpdateProfileRequest) (*User, error) {
+	user, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	name := strings.TrimSpace(req.Name)
+	email := normalizeEmail(req.Email)
+
+	if email != user.Email {
+		existing, err := s.repo.GetUserByEmail(ctx, email)
+		if err == nil && existing.ID != user.ID {
+			return nil, ErrEmailTaken
+		}
+		if err != nil && !errors.Is(err, ErrUserNotFound) {
+			return nil, err
+		}
+	}
+
+	if name == user.Name && email == user.Email {
+		return user, nil
+	}
+
+	if err := s.repo.UpdateUserProfile(ctx, user.ID, name, email); err != nil {
+		return nil, err
+	}
+
+	user.Name = name
+	user.Email = email
+
+	s.logger.Info("profile updated", "user_id", user.ID, "email", user.Email)
+	return user, nil
+}
+
 // Authenticate validates a bearer token and its backing session.
 func (s *Service) Authenticate(ctx context.Context, tokenString string) (*Claims, *Session, error) {
 	claims, err := parseToken(s.cfg.JWTSecret, tokenString)

@@ -38,10 +38,30 @@ const tabItems = [
   }
 ]
 
-const { user, pending, changePassword } = useAuth()
+const { user, pending, changePassword, updateProfile } = useAuth()
 
 const displayName = computed(() => user.value?.name || '')
 const email = computed(() => user.value?.email || '')
+
+const profileName = ref('')
+const profileEmail = ref('')
+
+watch(user, (current) => {
+  if (!current) return
+  profileName.value = current.name
+  profileEmail.value = current.email
+}, { immediate: true })
+
+const isProfileDirty = computed(() =>
+  profileName.value.trim() !== displayName.value
+  || profileEmail.value.trim().toLowerCase() !== email.value.toLowerCase()
+)
+
+const canSubmitProfile = computed(() =>
+  profileName.value.trim().length > 0
+  && EMAIL_PATTERN.test(profileEmail.value.trim())
+  && isProfileDirty.value
+)
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -123,6 +143,52 @@ function resetPasswordForm() {
   showCurrentPassword.value = false
   showNewPassword.value = false
   showConfirmPassword.value = false
+}
+
+async function onSaveProfile() {
+  const name = profileName.value.trim()
+  const emailValue = profileEmail.value.trim()
+
+  if (!name || !emailValue) {
+    toast.add({
+      title: 'Missing fields',
+      description: 'Please fill in your display name and email.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  if (!EMAIL_PATTERN.test(emailValue)) {
+    toast.add({
+      title: 'Invalid email',
+      description: 'Enter a valid email address.',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  if (!isProfileDirty.value) {
+    return
+  }
+
+  try {
+    await updateProfile({ name, email: emailValue })
+
+    toast.add({
+      title: 'Profile updated',
+      description: 'Your account details were saved.',
+      icon: 'i-lucide-check-circle'
+    })
+  } catch (err) {
+    toast.add({
+      title: 'Could not update profile',
+      description: apiErrorMessage(err),
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  }
 }
 
 async function onChangePassword() {
@@ -252,24 +318,33 @@ function onSaveNotifications() {
               class="w-full"
             >
               <UInput
-                :model-value="displayName"
+                v-model="profileName"
+                autocomplete="name"
                 class="w-full"
-                disabled
               />
             </UFormField>
 
             <UFormField
               label="Email"
               class="w-full"
-              hint="Editing your profile is coming soon"
             >
               <UInput
-                :model-value="email"
+                v-model="profileEmail"
                 type="email"
+                autocomplete="email"
                 class="w-full"
-                disabled
               />
             </UFormField>
+
+            <div class="flex justify-end">
+              <UButton
+                label="Save profile"
+                icon="i-lucide-user-pen"
+                :loading="pending"
+                :disabled="!canSubmitProfile"
+                @click="onSaveProfile"
+              />
+            </div>
           </UCard>
 
           <UCard :ui="{ body: 'space-y-5 p-4 sm:p-5' }">
