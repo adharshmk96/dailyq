@@ -9,7 +9,7 @@ services:
       DAILYQ_SERVER_MODE: release
       DAILYQ_SERVER_BASE_URL: ${DAILYQ_SERVER_BASE_URL:-http://localhost:8080}
       DAILYQ_DATABASE_DSN: /data/dailyq.db
-      DAILYQ_AUTH_JWT_SECRET: ${DAILYQ_AUTH_JWT_SECRET:?set a strong secret}
+      DAILYQ_AUTH_JWT_SECRET: ${DAILYQ_AUTH_JWT_SECRET:-set-a-strong-secret-please}
       DAILYQ_LOG_LEVEL: ${DAILYQ_LOG_LEVEL:-info}
       DAILYQ_LOG_FORMAT: json
     volumes:
